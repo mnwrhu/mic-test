@@ -52,7 +52,7 @@
           const filename = "audio_" + Date.now() + ".webm";
           formData.append("audio", blob, filename);
 
-          fetch("ae370b0eaf8d.sn.mynetname.net/mic-to-tv/upload.php", {
+          fetch("http://ae370b0eaf8d.sn.mynetname.net/mic-to-tv/upload.php", {
             method: "POST",
             body: formData
           }).then(res => res.text())
