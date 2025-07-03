@@ -6,68 +6,75 @@
 <body>
   <h2>🎤 Rekam & Kirim Suara ke Supabase</h2>
   <button id="rekamBtn">Mulai Rekam</button>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const SUPABASE_URL = 'https://zdwjuwbbhqzoqapvhiwn.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpkd2p1d2JiaHF6b3FhcHZoaXduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1NTQxNjEsImV4cCI6MjA2NzEzMDE2MX0.62anUbI3t_5Acd_Zbv57y5f5G59KRC07hwx9ovsf-W0';
 
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const { createClient } = supabase;
+    const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     const rekamBtn = document.getElementById('rekamBtn');
 
     let mediaRecorder;
     let chunks = [];
 
     rekamBtn.onclick = async () => {
+      console.log("Tombol diklik");
       if (mediaRecorder && mediaRecorder.state === "recording") {
         mediaRecorder.stop();
         rekamBtn.innerText = "Mulai Rekam";
         return;
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(stream);
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
 
-      mediaRecorder.ondataavailable = (e) => {
-        chunks.push(e.data);
-      };
+        mediaRecorder.ondataavailable = (e) => {
+          chunks.push(e.data);
+        };
 
-      mediaRecorder.onstop = async () => {
-        const blob = new Blob(chunks, { type: 'audio/webm' });
-        chunks = [];
+        mediaRecorder.onstop = async () => {
+          const blob = new Blob(chunks, { type: 'audio/webm' });
+          chunks = [];
 
-        const fileName = `rekaman-${Date.now()}.webm`;
-        const { data: uploadData, error: uploadError } = await supabase
-          .storage
-          .from('rekaman')
-          .upload(fileName, blob, {
-            contentType: 'audio/webm',
-            upsert: true
-          });
+          const fileName = `rekaman-${Date.now()}.webm`;
+          const { data: uploadData, error: uploadError } = await client
+            .storage
+            .from('rekaman')
+            .upload(fileName, blob, {
+              contentType: 'audio/webm',
+              upsert: true
+            });
 
-        if (uploadError) {
-          alert("❌ Gagal upload: " + uploadError.message);
-          return;
-        }
+          if (uploadError) {
+            alert("❌ Gagal upload: " + uploadError.message);
+            return;
+          }
 
-        const { data: urlData } = supabase
-          .storage
-          .from('rekaman')
-          .getPublicUrl(fileName);
+          const { data: urlData } = client
+            .storage
+            .from('rekaman')
+            .getPublicUrl(fileName);
 
-        // Simpan ke tabel log_suara
-        const { error: insertError } = await supabase
-          .from('log_suara')
-          .insert([{ url: urlData.publicUrl }]);
+          const { error: insertError } = await client
+            .from('log_suara')
+            .insert([{ url: urlData.publicUrl }]);
 
-        if (insertError) {
-          alert("❌ Gagal simpan metadata: " + insertError.message);
-        } else {
-          alert("✅ Rekaman berhasil dikirim!");
-        }
-      };
+          if (insertError) {
+            alert("❌ Gagal simpan metadata: " + insertError.message);
+          } else {
+            alert("✅ Rekaman berhasil dikirim!");
+          }
+        };
 
-      mediaRecorder.start();
-      rekamBtn.innerText = "Stop Rekam";
+        mediaRecorder.start();
+        rekamBtn.innerText = "Stop Rekam";
+      } catch (err) {
+        alert("❌ Tidak bisa mengakses mikrofon: " + err.message);
+      }
     };
   </script>
 </body>
