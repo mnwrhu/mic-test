@@ -53,9 +53,13 @@
           formData.append("audio", blob, filename);
 
           fetch("http://ae370b0eaf8d.sn.mynetname.net/mic-to-tv/upload.php", {
-            method: "POST",
-            body: formData
-          }).then(res => res.text())
+  method: "POST",
+  body: formData
+})
+.then(res => res.text())
+.then(text => alert("Respon: " + text))
+.catch(err => alert("Error: " + err));
+
             .then(msg => {
               document.getElementById("status").innerText = "✅ Terkirim: " + msg;
             }).catch(err => {
