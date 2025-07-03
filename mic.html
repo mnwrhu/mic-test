@@ -6,6 +6,7 @@
 <body>
   <h2>Rekaman Suara (Mic)</h2>
   <button id="rekamBtn">Mulai Rekam</button>
+
   <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
@@ -58,7 +59,7 @@
           waktu: Date.now()
         });
 
-        alert("Suara terkirim dan siap diputar.");
+        alert("✅ Suara berhasil dikirim ke node 'suara'.");
       };
 
       mediaRecorder.start();
