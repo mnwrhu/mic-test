@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mic Rekaman</title>
+</head>
+<body>
+  <h2>Rekaman Suara (Mic)</h2>
+  <button id="rekamBtn">Mulai Rekam</button>
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBFBy39mz7a_oRyF9MNqIReog0cF6fwo94",
+      authDomain: "suara-fisio.firebaseapp.com",
+      databaseURL: "https://suara-fisio-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "suara-fisio",
+      storageBucket: "suara-fisio.appspot.com",
+      messagingSenderId: "181760776634",
+      appId: "1:181760776634:web:7d2549465e1534c9c02583",
+      measurementId: "G-DJD8D9Q2Y5"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const storage = firebase.storage();
+    const db = firebase.database();
+
+    const rekamBtn = document.getElementById("rekamBtn");
+
+    let mediaRecorder;
+    let chunks = [];
+
+    rekamBtn.onclick = async function () {
+      if (mediaRecorder && mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+        rekamBtn.innerText = "Mulai Rekam";
+        return;
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+
+      mediaRecorder.ondataavailable = (e) => {
+        chunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(chunks, { type: "audio/webm" });
+        chunks = [];
+
+        const namaFile = `rekaman-${Date.now()}.webm`;
+        const ref = storage.ref().child(namaFile);
+        await ref.put(blob);
+
+        const url = await ref.getDownloadURL();
+        await db.ref("suara").set({
+          url: url,
+          waktu: Date.now()
+        });
+
+        alert("Suara terkirim dan siap diputar.");
+      };
+
+      mediaRecorder.start();
+      rekamBtn.innerText = "Stop Rekam";
+    };
+  </script>
+</body>
+</html>
