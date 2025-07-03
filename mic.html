@@ -1,37 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Mic Rekaman</title>
+  <title>Mic Rekaman - Supabase</title>
 </head>
 <body>
-  <h2>Rekaman Suara (Mic)</h2>
+  <h2>🎤 Rekam & Kirim Suara ke Supabase</h2>
   <button id="rekamBtn">Mulai Rekam</button>
-
-  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-storage-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyBFBy39mz7a_oRyF9MNqIReog0cF6fwo94",
-      authDomain: "suara-fisio.firebaseapp.com",
-      databaseURL: "https://suara-fisio-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "suara-fisio",
-      storageBucket: "suara-fisio.appspot.com",
-      messagingSenderId: "181760776634",
-      appId: "1:181760776634:web:7d2549465e1534c9c02583",
-      measurementId: "G-DJD8D9Q2Y5"
-    };
+    const SUPABASE_URL = 'https://zdwjuwbbhqzoqapvhiwn.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpkd2p1d2JiaHF6b3FhcHZoaXduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1NTQxNjEsImV4cCI6MjA2NzEzMDE2MX0.62anUbI3t_5Acd_Zbv57y5f5G59KRC07hwx9ovsf-W0';
 
-    firebase.initializeApp(firebaseConfig);
-    const storage = firebase.storage();
-    const db = firebase.database();
-
-    const rekamBtn = document.getElementById("rekamBtn");
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const rekamBtn = document.getElementById('rekamBtn');
 
     let mediaRecorder;
     let chunks = [];
 
-    rekamBtn.onclick = async function () {
+    rekamBtn.onclick = async () => {
       if (mediaRecorder && mediaRecorder.state === "recording") {
         mediaRecorder.stop();
         rekamBtn.innerText = "Mulai Rekam";
@@ -46,20 +32,38 @@
       };
 
       mediaRecorder.onstop = async () => {
-        const blob = new Blob(chunks, { type: "audio/webm" });
+        const blob = new Blob(chunks, { type: 'audio/webm' });
         chunks = [];
 
-        const namaFile = `rekaman-${Date.now()}.webm`;
-        const ref = storage.ref().child(namaFile);
-        await ref.put(blob);
+        const fileName = `rekaman-${Date.now()}.webm`;
+        const { data: uploadData, error: uploadError } = await supabase
+          .storage
+          .from('rekaman')
+          .upload(fileName, blob, {
+            contentType: 'audio/webm',
+            upsert: true
+          });
 
-        const url = await ref.getDownloadURL();
-        await db.ref("suara").set({
-          url: url,
-          waktu: Date.now()
-        });
+        if (uploadError) {
+          alert("❌ Gagal upload: " + uploadError.message);
+          return;
+        }
 
-        alert("✅ Suara berhasil dikirim ke node 'suara'.");
+        const { data: urlData } = supabase
+          .storage
+          .from('rekaman')
+          .getPublicUrl(fileName);
+
+        // Simpan ke tabel log_suara
+        const { error: insertError } = await supabase
+          .from('log_suara')
+          .insert([{ url: urlData.publicUrl }]);
+
+        if (insertError) {
+          alert("❌ Gagal simpan metadata: " + insertError.message);
+        } else {
+          alert("✅ Rekaman berhasil dikirim!");
+        }
       };
 
       mediaRecorder.start();
